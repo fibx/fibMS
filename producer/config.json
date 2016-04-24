@@ -1,0 +1,9 @@
+{
+	"centerAppServer": "http://127.0.0.1:6080",
+	"centerLinkServer": "127.0.0.1:6081",
+	"producerID": "rube-1",
+	"secretKey": "757838621c9453825926f8e78e854479",
+	"logsPath": "./logs",
+	"sdkPort": 6082,
+	"debuglog": true
+}

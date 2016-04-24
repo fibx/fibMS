@@ -1,0 +1,9 @@
+{
+	"centerAppServer": "http://127.0.0.1:6080",
+	"centerLinkServer": "127.0.0.1:6081",
+	"secretKey": "24cd690b666a30d8ce0d61a398af64d6",
+	"logsPath": "./logs",
+	"listenPort": 6085,
+	"ip": "127.0.0.1",
+	"debuglog": true
+}

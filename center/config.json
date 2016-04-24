@@ -1,0 +1,7 @@
+{
+	"linkServerPort": 6081,
+	"debuglog": true,
+	"logsPath": "./logs",
+	"appServerPort": 6080,
+	"healthCheckTime": 6000		
+}

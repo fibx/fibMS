@@ -1,0 +1,14 @@
+2016-04-16 17:40:59 INFO   - [
+  {
+    "clientid": "producer-rube-1",
+    "secretkey": "2d75efb68c1f50ce5a5b733a93392e65",
+    "token": "",
+    "type": "producer",
+    "created": "1460798928690",
+    "dispose": [Function],
+    "equals": [Function],
+    "toString": [Function],
+    "toJSON": [Function],
+    "valueOf": [Function]
+  }
+]

@@ -1,0 +1,11 @@
+{
+	"centerAppServer": "http://127.0.0.1:6080",
+	"centerLinkServer": "127.0.0.1:6081",
+	"consumerID": "rayna-1",
+	"secretKey": "643d64d2ef3b55b08d548b795389dc94",
+	"logsPath": "./logs",
+	"listenPort": 6084,
+	"sdkPort": 6083,
+	"ip": "127.0.0.1",
+	"debuglog": true
+}
