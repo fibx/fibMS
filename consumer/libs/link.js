@@ -67,6 +67,7 @@ function linkCenter(){
 		data;
 
 	let conn = net.connect(host, port);
+	reconnectTime = 0;
 	conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_connect', {
 		clientid: `consumer-${config.consumerID}`,
 		token: global.getToken(),

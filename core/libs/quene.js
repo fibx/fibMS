@@ -24,9 +24,9 @@ function Q(){
 				value[client].forEach(item=>{
 					let l = listens[`${item.type}-${item.message}`];
 					if (l){
-						!~l.indexOf(client) && l.push(client);
+						!~l.indexOf(client) && listens[`${item.type}-${item.message}`].push(client);
 					} else {
-						l = [client];
+						listens[`${item.type}-${item.message}`] = [client];
 					}
 				});
 			}
