@@ -2,6 +2,7 @@ const net = require('net');
 const log = require('./log');
 const tools = require('./tools');
 const auth = require('./auth');
+const message = require('./message');
 const global = require('./global')();
 const strategy = require('./strategy');
 const jrs = require('./jsonrpc/serializer');
@@ -26,7 +27,7 @@ function handler(conn){
 					}
 					if (type === 'producer' || type === 'queneserver'){
 						strategy.allotQueneServer();
-					}
+					} 
 					break;
 				case 'fibmscenter_healthCheck':
 					type = item.params.clientid.split('-')[0];
