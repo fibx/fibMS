@@ -18,6 +18,7 @@ if (config.debuglog === false){
 
 const linkServer = require('./libs/link');
 const auth = require('./libs/auth');
+const message = require('./libs/message');
 const global = require('./libs/global')();
 global.init();
 
@@ -43,7 +44,7 @@ router.post('/messageclear', function(){
 	if (!rs){
 		return this.status = 401;
 	} else {
-		if (auth.messageClear(rs.clientid)){
+		if (message.messageClear(rs.clientid)){
 			this.body = {result: 1};
 		} else {
 			this.status = 500;
@@ -56,7 +57,7 @@ router.post('/registermsg', function(){
 		return this.status = 401;
 	}
 	let data = JSON.parse(this.form['data']);
-	let rs = auth.registerMessage(data);
+	let rs = message.registerMessage(data);
 	if (rs){
 		this.body = {result: 1};
 	} else {

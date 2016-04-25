@@ -52,36 +52,5 @@ module.exports = {
 		} else {
 			return false;
 		}
-	},
-	registerMessage(data){
-		let created = Date.now();
-		let sql = `insert into message (message, clientid, created, type) values `;
-		let params = [];
-		data.forEach((item, idx)=>{
-			if (idx === 0){
-				sql += `(?, ?, ?, ?)`;
-			} else {
-				sql += `,(?, ?, ?, ?)`;
-			}
-			params = params.concat([item.message, `consumer-${item.clientid}`, created, item.type]);
-		});
-		try{
-			db.execute(sql, ...params);
-			global.setMessage(data);
-			return true;
-		} catch (e){
-			return false;
-		}
-	},
-	messageClear(clientid){
-		let sql = `delete from message where clientid=?`;
-		try{
-			db.execute(sql, clientid);
-			global.clearMessages(clientid);
-			return true;
-		} catch (e){
-			throw e
-			return false;
-		}
 	}
 };
