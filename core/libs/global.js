@@ -1,9 +1,20 @@
 const net = require('net');
+const coroutine = require("coroutine");
 
 function G(){
 	let token = '',
 		consumerClient = {},
 		consumerConn = {};
+	
+	function consumerConnListen(conn, clientid){
+		let data;
+		while (data = conn.read()){
+		}
+		conn.close();
+		delete consumerConn[clientid];
+		consumerClient[clientid].ip = '';
+		consumerClient[clientid].ping = -1;
+	}
 	return {
 		setToken(value){
 			token = value;
@@ -14,7 +25,7 @@ function G(){
 		setClient(data){
 			for (let client in data){
 				let d = data[client];
-				if (!d.ip || d.ping === -1) continue;
+				if (!d.ip) continue;
 				consumerClient[client] = {
 					token: d.token,
 					ip: d.ip,
@@ -25,6 +36,7 @@ function G(){
 					return;
 				}
 				let conn = net.connect(d.ip, d.port);
+				coroutine.start(consumerConnListen, conn, client);
 				consumerConn[client] = conn;
 			}
 		},
