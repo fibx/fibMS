@@ -19,16 +19,7 @@ function handler(conn){
 	while (data = conn.read()){
 		let d = tools.parseMessage(data.toString());
 		d.forEach(i=>{
-			let rs = quene.route(i);
-			if (rs){
-				let {clientids, message, params} = rs;
-				let conns = global.getClient().consumerConn;
-				clientids.forEach(clientid=>{
-					if (conns[clientid]){
-						conns[clientid].write('---fibMS---' + jrs.request(uuid.v4(), message, params));
-					}
-				});
-			}
+			quene.addQuene(i);
 		});
 	}
 

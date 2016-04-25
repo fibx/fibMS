@@ -1,15 +1,57 @@
 const coroutine = require("coroutine");
 const jrs = require('./jsonrpc/serializer');
+const uuid = require('./jsonrpc/uuid');
 const global = require('./global')();
 
 function Q(){
 	let listens = null;
 	let quenes = [];
+
+	function route(data){
+		let rs = jrs.deserialize(data).payload,
+			method = rs.method,
+			params = rs.params,
+			map = {
+				'r': 'request',
+				's': 'single',
+				'g': 'group'
+			};
+		let message = method.substr(8),
+			type = method.substr(6, 1);
+
+		if (type === 't'){
+			type = 'r';
+		}
+
+		let clientids = listens[`${map[type]}-${message}`];
+		if (clientids){
+			if (type === 'r' || type === 's'){
+				clientids = [clientids[parseInt(Math.random()*10) % clientids.length]];
+			}
+			return {
+				clientids,
+				message: `${message}_${type}`,
+				params,
+				type
+			}
+		} 
+	}
+
 	return {
 		start(){
 			function quene(){
 				while (true){
 					if (listens && quenes.length){
+						let rs = route(quenes.shift());
+						if (rs){
+							let {clientids, message, params} = rs;
+							let conns = global.getClient().consumerConn;
+							clientids.forEach(clientid=>{
+								if (conns[clientid]){
+									conns[clientid].write('---fibMS---' + jrs.request(uuid.v4(), message, params));
+								}
+							});
+						}
 					}
 					coroutine.sleep(10);
 				}
@@ -31,37 +73,8 @@ function Q(){
 				});
 			}
 		},
-		route(data){
-			let rs = jrs.deserialize(data).payload,
-				method = rs.method,
-				params = rs.params,
-				map = {
-					'r': 'request',
-					's': 'single',
-					'g': 'group'
-				};
-			let message = method.substr(8),
-				type = method.substr(6, 1);
-
-			if (type === 't'){
-				type = 'r';
-			}
-
-			let clientids = listens[`${map[type]}-${message}`];
-			if (clientids){
-				if (type === 'r' || type === 's'){
-					clientids = [clientids[parseInt(Math.random()*10) % clientids.length]];
-				}
-				return {
-					clientids,
-					message: `${message}_${type}`,
-					params,
-					type
-				}
-			} 
-		},
-		addQuene(arr){
-			quenes = quenes.concat(arr);
+		addQuene(obj){
+			quenes.push(obj);
 		}
 	}
 }
