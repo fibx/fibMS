@@ -22,7 +22,8 @@ function G(){
 					ip: '',
 					port: -1,
 					ping: -1,
-					messages: []
+					messages: [],
+					queneserverID: ''
 				}
 			});
 		},
@@ -44,7 +45,10 @@ function G(){
 		setConn(type, clientid, conn){
 			connPool[type][clientid] = conn;
 		},
-		getConns(){
+		getConns(type){
+			if (type){
+				return connPool[type];
+			}
 			return connPool;
 		},
 		authToken(type, clientid, token){
@@ -59,9 +63,8 @@ function G(){
 		getClient(type){
 			if (type){
 				return registeredClient[type];
-			} else {
-				return registeredClient;
-			}
+			} 
+			return registeredClient;
 		},
 		getRegisteredClient(){
 			let rs = {};

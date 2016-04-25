@@ -9,7 +9,7 @@ const jrs = require('./jsonrpc/serializer');
 const config = require('../config.json');
 
 function handler(conn){
-	let data;
+	let data, connType, connID;
 
 	while (data = conn.read()){
 		let d = tools.parseMessage(data.toString()), rs, type;
@@ -20,6 +20,10 @@ function handler(conn){
 					type = item.params.clientid.split('-')[0];
 					rs = global.authToken(type, item.params.clientid, item.params.token);
 					if (rs){
+						
+						connType = type;
+						connID = item.params.clientid;
+
 						global.setConn(type, item.params.clientid, conn);
 						global.setAddress(type, item.params.clientid, item.params.ip, item.params.port);
 					} else {
@@ -43,6 +47,7 @@ function handler(conn){
 	}
 
 	conn.close();
+	afterDisconnect(connType, connID);
 }
 
 function healthCheck(){
@@ -55,11 +60,7 @@ function healthCheck(){
 			try{
 				conns[t][clientid].write('---fibMS---' + jrs.notification('fibmscenter_healthCheck', {startTime: Date.now()}));
 			} catch (e){
-				log.info('app', `client:${clientid} log out`);
-				delete conns[t][clientid];
-				let type = clientid.split('-')[0];
-				global.setPing(type, clientid, -1);
-				type === 'consumer' && global.clearMessages(clientid);
+				afterDisconnect(t, clientid);
 			}
 		});
 	}
@@ -70,6 +71,16 @@ function healthCheck(){
 	}
 	run();
 	setInterval(run, config.healthCheckTime);
+}
+
+function afterDisconnect(type, clientid){
+	log.info('app', `client:${clientid} log out`);
+	let conns = global.getConns();
+	delete conns[type][clientid];
+	global.setPing(type, clientid, -1);
+	type === 'producer' && (global.getClient('producer')[clientid].queneserverID = '');
+	type === 'consumer' && global.clearMessages(clientid);
+	type === 'queneserver' && strategy.allotQueneServer(clientid);
 }
 
 exports.start = function(){
