@@ -64,9 +64,10 @@ function linkCenter(){
 	let arr = config.centerLinkServer.split(':'),
 		host = arr[0],
 		port = parseInt(arr[1]),
+		conn,
 		data;
 	try{
-		let conn = net.connect(host, port);
+		conn = net.connect(host, port);
 		reconnectTime = 0;
 	} catch (e){
 		log.info('link', 'link center error');
