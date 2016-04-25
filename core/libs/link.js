@@ -69,6 +69,7 @@ function linkCenter(){
 					}));
 					break;
 				case 'fibmscenter_messageRegister':
+					message.register();
 					break;
 			}
 		});
