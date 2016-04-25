@@ -65,9 +65,13 @@ function linkCenter(){
 		host = arr[0],
 		port = parseInt(arr[1]),
 		data;
-
-	let conn = net.connect(host, port);
-	reconnectTime = 0;
+	try{
+		let conn = net.connect(host, port);
+		reconnectTime = 0;
+	} catch (e){
+		log.info('link', 'link center error');
+		return;
+	}
 	conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_connect', {
 		clientid: `consumer-${config.consumerID}`,
 		token: global.getToken(),
