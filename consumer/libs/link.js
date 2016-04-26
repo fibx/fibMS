@@ -15,7 +15,7 @@ const RECONNECT_TIME = 1000;
 const MAX_RECONNECT_TIME = 10000;
 
 function sdkHandler(conn){
-	let data;
+	let data, id;
 	while (data = conn.read()) {
 		let listenList = [];
 		
@@ -32,8 +32,10 @@ function sdkHandler(conn){
 					}
 				
 				let instanceid = rs.payload.params.instanceid;
+				id = instanceid;
 				global.setSdkConn(instanceid, conn);
 				if (global.listenExists(messageName, map[type])){						//message register just once
+					global.setListens(instanceid, messageName, map[type]);
 					return;
 				}
 
@@ -58,6 +60,11 @@ function sdkHandler(conn){
 		 	}
 		}
 	}
+	conn.close();
+
+	let conns = global.getSdkConns();
+	delete conns[id];
+	global.removeListens(id);
 }
 
 function linkCenter(){
@@ -123,15 +130,15 @@ function listenHandler(conn){
 				type = item.method.substr(item.method.length - 1, 1),
 				listens = global.getListens(),
 				conns = global.getSdkConns(),
-				instanceids = listens[item.method];
-			
+				instanceids = listens[item.method].filter(i=>{
+					return !!conns[i];
+				});
 			if (!instanceids) return;
 			if (type === 'r' || type === 's'){
 				instanceids = [instanceids[0]];
 			} 
-			
 			instanceids.forEach(i=>{
-				conns[i].write('---fibMS---' + jrs.request(uuid.v4(), item.method, item.params));
+				conns[i] && conns[i].write('---fibMS---' + jrs.request(uuid.v4(), item.method, item.params));
 			});		
 		});
 	}

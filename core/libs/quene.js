@@ -53,7 +53,7 @@ function Q(){
 							});
 						}
 					}
-					coroutine.sleep(10);
+					coroutine.sleep(1000);
 				}
 			}
 			coroutine.start(quene);

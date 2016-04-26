@@ -17,7 +17,19 @@
 		setListens(instanceid, message, type){
 			
 			let name = `${message}_${map[type]}`;
-			listens[name] ? listens[name].push(instanceid) : (listens[name] = [instanceid]);
+			if (listens[name]){
+				!~listens[name].indexOf(instanceid) && listens[name].push(instanceid);
+			} else {
+				listens[name] = [instanceid];
+			}
+		},
+		removeListens(instanceid){
+			Object.keys(listens).forEach(name=>{
+				let idx = listens[name].indexOf(instanceid);
+				if (!!~idx){
+					listens[name].splice(idx, 1);
+				}
+			});
 		},
 		getListens(){
 			return listens;
