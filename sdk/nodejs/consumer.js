@@ -45,9 +45,9 @@ let Consumer = function(option){
 					case 'r':
 						if (callbackPool.requestService[messageName]){		 // cb(params, successFunc, errorFunc)
 							callbackPool.requestService[messageName](rs.payload.params, function(result){	 
-								send(jrs.success(rs.payload.id, result));
+								send.call(that, jrs.success(rs.payload.id, result));
 							}, function(result){
-								send(jrs.error(rs.payload.id, result));
+								send.call(that, jrs.error(rs.payload.id, result));
 							});
 						}
 						break;
