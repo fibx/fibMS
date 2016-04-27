@@ -1,7 +1,7 @@
 {
-  "name": "fibms-center",
+  "name": "fibms-core",
   "version": "1.0.0",
-  "description": "fibms 注册中心",
+  "description": "fibms 队列核心",
   "main": "app.js",
   "scripts": {
     "install": "fibjs fibjs-install.js"
@@ -15,13 +15,11 @@
     "message quene",
     "fibjs",
     "fibx",
-    "center"
+    "core"
   ],
   "author": "Rube",
   "license": "ISC",
   "dependencies": {
-    "fibjs-fibx": "^0.2.0",
-    "fibjs-fibx-router": "^1.2.0"
   },
   "bugs": {
     "url": "https://github.com/fibx/fibMS/issues"
