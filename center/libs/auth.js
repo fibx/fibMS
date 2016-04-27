@@ -18,6 +18,7 @@ function addClient(id, type){
 }	
 
 module.exports = {
+	/** command FUNC **/
 	addProducer(producerID){
 		addClient('producer-' + producerID, 'producer');
 	},
@@ -32,6 +33,29 @@ module.exports = {
 			console.error('注册失败');
 		}
 	},
+	listRegisterStatus(){
+		let rs = db.execute(`select * from auth`);
+		if (rs.length){
+			rs.forEach(client=>{
+				console.log(`${client.clientid}      ${client.secretkey}      ${new Date(parseInt(client.created))}`);
+			});
+		} else {
+			console.error('没有注册的端');
+		}
+	},
+	rmRegisterClient(clientid){
+		let type = clientid.split('-')[0];
+		if (type === 'producer' || type === 'consumer' || type === 'queneserver'){
+			let rs = db.execute(`delete from auth where clientid = ?`, clientid);
+			if (type === 'queneserver'){
+				db.execute(`delete from server where queneserver = ?`, clientid.substr(clientid.split('-').pop().length - 1))
+			} 
+			console.log('删除成功')
+		} else {
+			console.log('没有找到要删除的端');
+		}
+	},
+	/** server FUNC **/
 	authClientByToken(token){
 		let rs = db.execute('select clientid, type from auth where token=?', token);
 		if (rs.length){
