@@ -4,7 +4,8 @@ const coroutine = require("coroutine");
 function G(){
 	let token = '',
 		consumerClient = {},
-		consumerConn = {};
+		consumerConn = {},
+		queneRate = 1000;
 	
 	function consumerConnListen(conn, clientid){
 		let data;
@@ -45,6 +46,12 @@ function G(){
 				consumerClient,
 				consumerConn
 			}
+		},
+		setQueneRate(rate){
+			queneRate = rate;
+		},
+		getQueneRate(){
+			return queneRate;
 		}
 	}
 }

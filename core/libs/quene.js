@@ -53,7 +53,7 @@ function Q(){
 							});
 						}
 					}
-					coroutine.sleep(1000);
+					coroutine.sleep(global.getQueneRate());
 				}
 			}
 			coroutine.start(quene);
