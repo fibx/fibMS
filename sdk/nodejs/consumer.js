@@ -39,10 +39,10 @@ let Consumer = function(option){
 			tools.parseMessage(data.toString()).forEach(function(item){
 				let rs = jrs.deserialize(item.toString()),
 					len = rs.payload.method.length;
-				let messageName = rs.payload.method.substr(0, len - 2);	     // ${msgName}_s | ${msgName}_g | ${msgName}_r  
-				let type = rs.payload.method.substr(len - 1, 1);	         // payload.method = ${msgName}_${type}
+				let messageName = rs.payload.method.substr(0, len - 3);	     // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
+				let type = rs.payload.method.substr(len - 2, 2);	         // payload.method = ${msgName}_${type}
 				switch (type) {
-					case 'r':
+					case 'RE':
 						if (callbackPool.requestService[messageName]){		 // cb(params, successFunc, errorFunc)
 							callbackPool.requestService[messageName](rs.payload.params, function(result){	 
 								send.call(that, jrs.success(rs.payload.id, result));
@@ -51,10 +51,10 @@ let Consumer = function(option){
 							});
 						}
 						break;
-					case 's':
+					case 'SI':
 						callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
 						break;
-					case 'g':
+					case 'GR':
 						callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func){
 							func(rs.payload.params);
 						});

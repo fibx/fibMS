@@ -12,27 +12,24 @@ function Q(){
 			method = rs.method,
 			params = rs.params,
 			map = {
-				'r': 'request',
-				's': 'single',
-				'g': 'group'
+				'RE': 'request',
+				'SI': 'single',
+				'GR': 'group'
 			};
-		let message = method.substr(8),
-			type = method.substr(6, 1);
-
-		if (type === 't'){
-			type = 'r';
-		}
+		let message = method.substr(3),
+			type = method.substr(0, 2);
 
 		let clientids = listens[`${map[type]}-${message}`];
 		if (clientids){
-			if (type === 'r' || type === 's'){
+			if (type === 'RE' || type === 'SI'){
 				clientids = [clientids[parseInt(Math.random()*10) % clientids.length]];
 			}
 			return {
 				clientids,
 				message: `${message}_${type}`,
 				params,
-				type
+				type,
+				id: rs.id
 			}
 		} 
 	}
@@ -44,11 +41,11 @@ function Q(){
 					if (listens && quenes.length){
 						let rs = route(quenes.shift());
 						if (rs){
-							let {clientids, message, params} = rs;
+							let {clientids, message, params, id} = rs;
 							let conns = global.getClient().consumerConn;
 							clientids.forEach(clientid=>{
 								if (conns[clientid]){
-									conns[clientid].write('---fibMS---' + jrs.request(uuid.v4(), message, params));
+									conns[clientid].write('---fibMS---' + jrs.request(id, message, params));
 								}
 							});
 						}

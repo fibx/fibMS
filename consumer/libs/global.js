@@ -1,8 +1,8 @@
  function G(){
  	let map = {
-		'request': 'r',
-		'single': 's',
-		'group': 'g'
+		'request': 'RE',
+		'single': 'SI',
+		'group': 'GR'
 	};
 	let token = '';
 	let listens = {};

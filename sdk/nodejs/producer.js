@@ -6,6 +6,36 @@ const tools = require('./libs/tools');
 
 const separator = '---fibMS---';
 
+let Message = function(texts){
+	this.texts = Array.isArray(texts) ? texts : typeof texts === 'string' ? [texts] : [];
+	this.type = Producer.prototype.MESSAGE_NORMAL;
+	this.props = {
+		D: 0,
+		P: 0,
+		R: 1
+	};
+	this.params = {};
+	this.callback = null;
+}
+
+Message.prototype.setProperty = function(property, value){
+	this.props[property] = value;
+}
+
+Message.prototype.setParams = function(key, value){
+	if (typeof key === 'string'){
+		this.params[key] = value;
+	}
+}
+
+Message.prototype.setType = function(type){
+	this.type = type;
+}
+
+Message.prototype.addCallBack = function(func){
+	this.callback = func;
+}
+
 let Producer = function(option){
 	option = option || {
 		port: 6082
@@ -70,22 +100,37 @@ function send(str){
 	}
 }
 
-Producer.prototype.sendMessage = function(messageName, messageParams){
-	let str = jrs.notification(`notifys_${messageName}`, messageParams);
+Producer.prototype.createMessage = function(texts){
+	return new Message(texts);
+};
+
+Producer.prototype.sendMessage = function(message){
+	
+	if (!message.texts.length){
+		return;
+	}
+
+	let obj = {
+		type: message.type,
+		props: message.props,
+		texts: message.texts,
+		params: message.params,
+		id: uuid.v4()
+	}
+
+	obj.type === 'RE' && message.callback && (this.callbackPool[obj.id] = message.callback);
+
+	let str = jrs.notification('sendMessage', obj);
 	send.call(this, str);
 };
 
-Producer.prototype.sendGroupMessage = function(messageName, messageParams){
-	let str = jrs.notification(`notifyg_${messageName}`, messageParams);
-	send.call(this, str);
-};
+Producer.prototype.SCHEDULED_DEALY = 'D';
+Producer.prototype.SCHEDULED_PERIOD = 'P';
+Producer.prototype.SCHEDULED_REPEAT = 'R';
 
-Producer.prototype.requestService = function(messageName, messageParams, cb){
-	let id = uuid.v4();
-	let str = jrs.request(id, `request_${messageName}`, messageParams);
-	this.callbackPool[id] = cb;
-	send.call(this, str);
-};
+Producer.prototype.MESSAGE_GROUP = 'GR';
+Producer.prototype.MESSAGE_NORMAL = 'SI';
+Producer.prototype.MESSAGE_REQUEST = 'RE';
 
 let instance = null;
 module.exports = function(option){

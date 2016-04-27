@@ -127,18 +127,19 @@ function listenHandler(conn){
 		let d = tools.parseMessage(data.toString());
 		d.forEach(i=>{
 			let item = jrs.deserialize(i).payload,
-				type = item.method.substr(item.method.length - 1, 1),
+				type = item.method.substr(item.method.length - 2, 2),
+				id = item.id,
 				listens = global.getListens(),
 				conns = global.getSdkConns(),
 				instanceids = listens[item.method].filter(i=>{
 					return !!conns[i];
 				});
 			if (!instanceids) return;
-			if (type === 'r' || type === 's'){
+			if (type === 'RE' || type === 'SI'){
 				instanceids = [instanceids[0]];
 			} 
 			instanceids.forEach(i=>{
-				conns[i] && conns[i].write('---fibMS---' + jrs.request(uuid.v4(), item.method, item.params));
+				conns[i] && conns[i].write('---fibMS---' + jrs.request(id, item.method, item.params));
 			});		
 		});
 	}

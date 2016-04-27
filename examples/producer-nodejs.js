@@ -1,10 +1,13 @@
 'use strict';
-const producer = require('../sdk/nodejs').Producer();
+const Producer = require('../sdk/nodejs').Producer();
 
-producer.sendMessage('hello', {a: 1});
-producer.sendGroupMessage('hellogroup', {b: 2});
-producer.requestService('hellorequest', {c:3}, function(data){
-	console.log(data);
-});
+let message = Producer.createMessage('hello');
+message.setParams('hello', 'yes');
+Producer.sendMessage(message);
 
+
+message = Producer.createMessage('hellogroup');
+message.setType(Producer.MESSAGE_GROUP);
+message.setParams('hellogroup', 'yes');
+Producer.sendMessage(message);
 
