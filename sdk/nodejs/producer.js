@@ -4,6 +4,8 @@ const jrs = require('./libs/serializer');
 const uuid = require('./libs/uuid');
 const tools = require('./libs/tools');
 
+const separator = '---fibMS---';
+
 let Producer = function(option){
 	option = option || {
 		port: 6082
@@ -60,10 +62,10 @@ function send(str){
 		}, 0);
 	}
 	if (this.connected === true){
-		this.client.write('---fibMS---' + str);
+		this.client.write(separator + str);
 	} else {
 		this.connect(function(){
-			that.client.write('---fibMS---' + str);
+			that.client.write(separator + str);
 		});
 	}
 }
