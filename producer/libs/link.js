@@ -20,6 +20,7 @@ let queneserver = {
 	queneTimeout = null;
 const RECONNECT_TIME = 1000;
 const MAX_RECONNECT_TIME = 10000;
+const requestClientRecord = {};
 
 function sdkHandler(conn){
 	let data;
@@ -29,6 +30,9 @@ function sdkHandler(conn){
 			let messagebody = jrs.deserialize(i);
 			if (messagebody.type === 'notification' && messagebody.payload.method === 'sendMessage'){
 				let task = message.parse(messagebody);
+				if (messagebody.payload.params.type === 'RE'){
+					requestClientRecord[messagebody.payload.params.id] = conn;
+				}
 				task && quene.addTask(task);
 			}
 		});
@@ -44,7 +48,16 @@ function linkQueneServer(){
 			quene.setQueneServer(queneserver);
 			queneReconnectTime = 0;
 			while (data = queneserver.conn.read()){
-
+				let d = tools.parseMessage(data.toString());
+				d.forEach(i=>{
+					let rs = jrs.deserialize(i);
+					if (rs.type === 'success' || rs.type === 'error'){
+						if (requestClientRecord[rs.payload.id]){
+							requestClientRecord[rs.payload.id].write('---fibMS---' + i);
+							delete requestClientRecord[rs.payload.id];
+						}
+					}
+				});
 			}
 			queneserver.conn.close();
 			queneserver.conn = null;

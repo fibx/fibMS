@@ -8,7 +8,7 @@ const auth = require('./auth');
 const global = require('./global')();
 const config = require('../config.json');
 
-let queneserver = null,
+let requestQueneServerRecord = {},
 	reconnectTime = 0,
 	timeout = null;
 const RECONNECT_TIME = 1000;
@@ -45,6 +45,12 @@ function sdkHandler(conn){
 					clientid: config.consumerID,
 					instanceid
 				});
+			} else if (rs.type === 'success' || rs.type === 'error'){
+				let requestId = rs.payload.id;
+				if (requestQueneServerRecord[requestId]){
+					requestQueneServerRecord[requestId].write('---fibMS---' + item);
+					delete requestQueneServerRecord[requestId];
+				}
 			}
 		});
 
@@ -138,6 +144,7 @@ function listenHandler(conn){
 			if (type === 'RE' || type === 'SI'){
 				instanceids = [instanceids[0]];
 			} 
+			type === 'RE' && (requestQueneServerRecord[id] = conn);
 			instanceids.forEach(i=>{
 				conns[i] && conns[i].write('---fibMS---' + jrs.request(id, item.method, item.params));
 			});		

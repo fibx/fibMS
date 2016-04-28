@@ -24,11 +24,12 @@ consumer.onGroupMessage('hellogroup', function(params){
 	console.log('group2');
 });
 
-consumer.onRequestService('hellorequest', function(params, successfunc, errorfunc){
-	if (params.issuccess){
-		successfunc('test');
+consumer.onRequestService('helloRequest', function(params, successfunc, errorfunc){
+	console.log('response');
+	if (params.name){
+		successfunc({a: params.name.a + 1, b: params.name.b + 1});
 	} else {
-		errorfunc('test');
+		errorfunc('test error', 'fuck');
 	}
 });
 

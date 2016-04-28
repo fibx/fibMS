@@ -6,11 +6,11 @@ util = require('util');
 
 // Add a serialize() method to the prototype chain to ensure that the
 // serialization happens properly
-JsonRpcError = function JsonRpcError(msg) {
+JsonRpcError = function JsonRpcError(msg, data) {
     this.name    = 'JsonRpcError';
     this.code    = -32603;
     this.message = msg;
-    this.data    = Array.prototype.slice.call(arguments).splice();
+    this.data    = data;
 };
 
 JsonRpcError.prototype.serialize = function serialize() {

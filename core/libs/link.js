@@ -19,7 +19,7 @@ function handler(conn){
 	while (data = conn.read()){
 		let d = tools.parseMessage(data.toString());
 		d.forEach(i=>{
-			quene.addQuene(i);
+			quene.addQuene(i, conn);
 		});
 	}
 

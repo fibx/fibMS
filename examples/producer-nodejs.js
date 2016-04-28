@@ -41,3 +41,30 @@ message.setProperty(Producer.SCHEDULED_REPEAT, 6);
 message.setParams('hello period repeat', 'ok');
 Producer.sendMessage(message);
 
+//request-response success
+message = Producer.createMessage('helloRequest');
+message.setType(Producer.MESSAGE_REQUEST);
+message.setParams('name', {a:1, b:2});
+message.addCallBack({
+	success: function(result){
+		console.log(result)
+	},
+	error: function(){
+		console.log('error');
+	}
+});
+Producer.sendMessage(message);
+
+//request-response error
+message = Producer.createMessage('helloRequest');
+message.setType(Producer.MESSAGE_REQUEST);
+message.setParams('nameerror', {a:1, b:2});
+message.addCallBack({
+	success: function(result){
+		console.log(result)
+	},
+	error: function(result){
+		console.log(result);
+	}
+});
+Producer.sendMessage(message);

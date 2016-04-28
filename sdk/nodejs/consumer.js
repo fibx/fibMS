@@ -47,7 +47,9 @@ let Consumer = function(option){
 							callbackPool.requestService[messageName](rs.payload.params, function(result){	 
 								send.call(that, jrs.success(rs.payload.id, result));
 							}, function(result){
-								send.call(that, jrs.error(rs.payload.id, result));
+								let data = Array.prototype.slice.call(arguments);
+								data.splice(0, 1);
+								send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
 							});
 						}
 						break;

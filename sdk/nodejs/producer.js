@@ -71,7 +71,7 @@ let Producer = function(option){
 					cb && cb.success && cb.success(rs.payload.result || null);
 				} else if (rs.type === 'error'){
 					let cb = callbackPool[rs.payload.id];
-					cb && cb.error && cb.error(rs.payload.result || null);
+					cb && cb.error && cb.error(rs.payload.error || null);
 				}
 			});
 		});

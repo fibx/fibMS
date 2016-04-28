@@ -1,15 +1,27 @@
 const net = require('net');
 const coroutine = require("coroutine");
+const jrs = require('./jsonrpc/serializer');
+const tools = require('./tools');
 
 function G(){
 	let token = '',
 		consumerClient = {},
 		consumerConn = {},
-		queneRate = 10;
+		queneRate = 10,
+		requestProducerRecord = {};
 	
 	function consumerConnListen(conn, clientid){
 		let data;
 		while (data = conn.read()){
+			tools.parseMessage(data.toString()).forEach(item=>{
+				let rs = jrs.deserialize(item);
+				if (rs.type === 'success' || rs.type === 'error'){
+					if (requestProducerRecord[rs.payload.id]){
+						requestProducerRecord[rs.payload.id].write('---fibMS---' + item);
+						delete requestProducerRecord[rs.payload.id];
+					}
+				}
+			});
 		}
 		conn.close();
 		delete consumerConn[clientid];
@@ -52,6 +64,9 @@ function G(){
 		},
 		getQueneRate(){
 			return queneRate;
+		},
+		addRequestProducerRecord(id, conn){
+			requestProducerRecord[id] = conn;
 		}
 	}
 }

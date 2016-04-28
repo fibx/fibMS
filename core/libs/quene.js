@@ -4,11 +4,11 @@ const uuid = require('./jsonrpc/uuid');
 const global = require('./global')();
 
 function Q(){
-	let listens = null;
-	let quenes = [];
+	let listens = null,
+		quenes = [];
 
 	function route(data){
-		let rs = jrs.deserialize(data).payload,
+		let rs = data.payload,
 			method = rs.method,
 			params = rs.params,
 			map = {
@@ -70,7 +70,11 @@ function Q(){
 				});
 			}
 		},
-		addQuene(obj){
+		addQuene(str, conn){
+			let obj = jrs.deserialize(str);
+			if (obj.payload.method.substr(0, 2) === 'RE'){
+				global.addRequestProducerRecord(obj.payload.id, conn);
+			}
 			quenes.push(obj);
 		}
 	}
