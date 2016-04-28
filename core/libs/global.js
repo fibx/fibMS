@@ -5,7 +5,7 @@ function G(){
 	let token = '',
 		consumerClient = {},
 		consumerConn = {},
-		queneRate = 1000;
+		queneRate = 10;
 	
 	function consumerConnListen(conn, clientid){
 		let data;
