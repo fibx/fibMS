@@ -2,3 +2,4 @@ node_modules
 .modules
 tmp
 dist
+nohup.out
