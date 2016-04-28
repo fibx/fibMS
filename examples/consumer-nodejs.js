@@ -5,6 +5,18 @@ consumer.onMessage('hello', function(params){
 	console.log(params);
 });
 
+consumer.onMessage('dealy', function(params){
+	console.log(params);
+});
+
+consumer.onMessage('period', function(params){
+	console.log(params);
+});
+
+consumer.onGroupMessage('all', function(params){
+	console.log(params);
+});
+
 consumer.onGroupMessage('hellogroup', function(params){
 	console.log('group1');
 });

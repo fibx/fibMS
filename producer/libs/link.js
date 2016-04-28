@@ -5,6 +5,7 @@ const jrs = require('./jsonrpc/serializer');
 const uuid = require('./jsonrpc/uuid');
 const tools = require('./tools');
 const log = require('./log');
+const quene = require('./quene');
 const message = require('./message');
 const config = require('../config.json');
 
@@ -27,8 +28,8 @@ function sdkHandler(conn){
 		d.forEach(i=>{
 			let messagebody = jrs.deserialize(i);
 			if (messagebody.type === 'notification' && messagebody.payload.method === 'sendMessage'){
-				let {id, method, params} = message.parse(messagebody);
-				queneserver.conn && queneserver.conn.write('---fibMS---' + jrs.request(id, method, params));
+				let task = message.parse(messagebody);
+				task && quene.addTask(task);
 			}
 		});
 	}
@@ -40,6 +41,7 @@ function linkQueneServer(){
 		let data;
 		if (queneserver.ip && queneserver.port != -1){
 			queneserver.conn = net.connect(queneserver.ip, queneserver.port);
+			quene.setQueneServer(queneserver);
 			queneReconnectTime = 0;
 			while (data = queneserver.conn.read()){
 
