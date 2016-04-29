@@ -25,9 +25,9 @@ let Consumer = function(option){
 	function create(isReConnect, cb){
 		that.client = net.connect(option.port || 6083, function(){
 			if (isReConnect){
-				console.log('Producer inferface reconnect Success');
+				console.log('Consumer inferface reconnect Success');
 			} else {
-				console.log('Producer inferface connect Success');
+				console.log('Consumer inferface connect Success');
 			}
 			that.connected = true;
 			cb && cb();
