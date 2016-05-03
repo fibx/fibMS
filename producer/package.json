@@ -1,6 +1,6 @@
 {
   "name": "fibms-producer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "fibms 生产者端",
   "main": "app.js",
   "scripts": {
