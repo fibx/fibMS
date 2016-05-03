@@ -10,24 +10,35 @@ function addZero(str, length){
 }
 
 function quene() {
+	const MAX_LIMIT = 100;
+	
 	while (true) {
-		let time = Date.now(),
+		let limit = 0,
 			task;
 
 		while (task = tasks.poll()){
+			
+			let time = Date.now();
+			limit++;
+
 			if ((task.start === task.last && task.dealy && time - task.start < task.dealy) ||
 				(task.start !== task.last && task.period && time - task.last < task.period)) {
-				return tasks.add(task);
+				tasks.add(task);
+			} else {
+				let content = new Buffer(jrs.request(task.id, task.method, task.params)),
+					info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+
+				queneserver && queneserver.conn && queneserver.conn.write(Buffer.concat([info, content], info.length + content.length));
+				task.times && (task.times -= 1);
+				task.last = Date.now();
+
+				if (!(task.times === 0 && task.repeat != 0)) {
+					tasks.add(task);
+				}
 			}
-			let content = new Buffer(jrs.request(task.id, task.method, task.params)),
-				info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
 
-			queneserver && queneserver.conn && queneserver.conn.write(Buffer.concat([info, content], info.length + content.length));
-			task.times && (task.times -= 1);
-			task.last = Date.now();
-
-			if (!(task.times === 0 && task.repeat != 0)) {
-				return tasks.add(task);
+			if (limit > MAX_LIMIT){
+				break;
 			}
 		}
 
