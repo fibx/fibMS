@@ -1,6 +1,6 @@
 {
   "name": "fibms-node-client",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "fibms 消息系统 node 客户端",
   "main": "index.js",
   "repository": {

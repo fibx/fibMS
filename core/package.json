@@ -1,6 +1,6 @@
 {
   "name": "fibms-core",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "fibms 队列核心",
   "main": "app.js",
   "scripts": {
