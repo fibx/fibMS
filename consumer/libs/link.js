@@ -13,46 +13,50 @@ let requestQueneServerRecord = {},
 	timeout = null;
 const RECONNECT_TIME = 1000;
 const MAX_RECONNECT_TIME = 10000;
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 function sdkHandler(conn){
 	let data, id;
-	while (data = conn.read()) {
-		let listenList = [];
-		
-		tools.parseMessage(data.toString()).forEach(item=>{
-			let rs = jrs.deserialize(item);
-			if (rs.type === 'notification'){
-				let arr = rs.payload.method.split('_'),
-					type = arr.shift(),
-					messageName = arr.join('_'),
-					map = {
-						'listens': 'single',
-						'listeng': 'group',
-						'listenr': 'request'
-					}
-				
-				let instanceid = rs.payload.params.instanceid;
-				id = instanceid;
-				global.setSdkConn(instanceid, conn);
-				if (global.listenExists(messageName, map[type])){						//message register just once
-					global.setListens(instanceid, messageName, map[type]);
-					return;
-				}
+	while (data = conn.read(25)) {
+		let listenList = [],
+			len = tools.parseMessage(data.toString()),
+			item = conn.read(len).toString();
 
-				listenList.push({	
+		let rs = jrs.deserialize(item);
+		if (rs.type === 'notification') {
+			let arr = rs.payload.method.split('_'),
+				type = arr.shift(),
+				messageName = arr.join('_'),
+				map = {
+					'listens': 'single',
+					'listeng': 'group',
+					'listenr': 'request'
+				};
+
+			let instanceid = rs.payload.params.instanceid;
+			id = instanceid;
+			global.setSdkConn(instanceid, conn);
+			if (global.listenExists(messageName, map[type])) {				 //message register just once
+				global.setListens(instanceid, messageName, map[type]);
+			} else {
+				listenList.push({
 					type: map[type],
 					message: messageName,
 					clientid: config.consumerID,
 					instanceid
 				});
-			} else if (rs.type === 'success' || rs.type === 'error'){
-				let requestId = rs.payload.id;
-				if (requestQueneServerRecord[requestId]){
-					requestQueneServerRecord[requestId].write('---fibMS---' + item);
-					delete requestQueneServerRecord[requestId];
-				}
 			}
-		});
+		} else if (rs.type === 'success' || rs.type === 'error') {
+			let requestId = rs.payload.id;
+			if (requestQueneServerRecord[requestId]) {
+				let content = new Buffer(item),
+					info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+				requestQueneServerRecord[requestId].write(Buffer.concat([info, content], info.length + content.length));
+				delete requestQueneServerRecord[requestId];
+			}
+		}
 
 		if (listenList.length){
 		 	let rs = auth.registerMessage(listenList, global.getToken());
@@ -86,26 +90,31 @@ function linkCenter(){
 		log.info('link', 'link center error');
 		return;
 	}
-	conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_connect', {
+
+	let content = new Buffer(jrs.request(uuid.v4(), 'fibmscenter_connect', {
 		clientid: `consumer-${config.consumerID}`,
 		token: global.getToken(),
 		ip: config.ip,
 		port: config.listenPort
-	}));
-	while (data = conn.read()){
-		let d = tools.parseMessage(data.toString());
-		d.forEach(i=>{
-			let item = jrs.deserialize(i).payload;
-			switch (item.method){
-				case 'fibmscenter_healthCheck':
-					conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_healthCheck', {
-						startTime: item.params.startTime,
-						clientid: `consumer-${config.consumerID}`,
-						token: global.getToken()
-					}));
-					break;
-			}
-		});
+	})),
+		info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+	conn.write(Buffer.concat([info, content], info.length + content.length));
+
+	while (data = conn.read(25)){
+		let len = tools.parseMessage(data.toString()),
+			i = conn.read(len).toString();
+		let item = jrs.deserialize(i).payload;
+		switch (item.method) {
+			case 'fibmscenter_healthCheck':
+				content = new Buffer(jrs.request(uuid.v4(), 'fibmscenter_healthCheck', {
+					startTime: item.params.startTime,
+					clientid: `consumer-${config.consumerID}`,
+					token: global.getToken()
+				}));
+				info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+				conn.write(Buffer.concat([info, content], info.length + content.length));
+				break;
+		}
 	}
 	conn.close();
 
@@ -129,25 +138,26 @@ function linkCenter(){
 
 function listenHandler(conn){
 	let data;
-	while (data = conn.read()){
-		let d = tools.parseMessage(data.toString());
-		d.forEach(i=>{
-			let item = jrs.deserialize(i).payload,
-				type = item.method.substr(item.method.length - 2, 2),
-				id = item.id,
-				listens = global.getListens(),
-				conns = global.getSdkConns(),
-				instanceids = listens[item.method].filter(i=>{
-					return !!conns[i];
-				});
-			if (!instanceids) return;
-			if (type === 'RE' || type === 'SI'){
-				instanceids = [instanceids[0]];
-			} 
-			type === 'RE' && (requestQueneServerRecord[id] = conn);
-			instanceids.forEach(i=>{
-				conns[i] && conns[i].write('---fibMS---' + jrs.request(id, item.method, item.params));
-			});		
+	while (data = conn.read(25)){
+		let len = tools.parseMessage(data.toString()),
+			i = conn.read(len).toString();
+		let item = jrs.deserialize(i).payload,
+			type = item.method.substr(item.method.length - 2, 2),
+			id = item.id,
+			listens = global.getListens(),
+			conns = global.getSdkConns(),
+			instanceids = listens[item.method].filter(i => {
+				return !!conns[i];
+			});
+		if (!instanceids) return;
+		if (type === 'RE' || type === 'SI') {
+			instanceids = [instanceids[0]];
+		}
+		type === 'RE' && (requestQueneServerRecord[id] = conn);
+		instanceids.forEach(i => {
+			let content = new Buffer(jrs.request(id, item.method, item.params)),
+				info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+			conns[i] && conns[i].write(Buffer.concat([info, content], info.length + content.length));
 		});
 	}
 }

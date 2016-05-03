@@ -2,6 +2,9 @@ const net = require('net');
 const coroutine = require("coroutine");
 const jrs = require('./jsonrpc/serializer');
 const tools = require('./tools');
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 function G(){
 	let token = '',
@@ -12,16 +15,19 @@ function G(){
 	
 	function consumerConnListen(conn, clientid){
 		let data;
-		while (data = conn.read()){
-			tools.parseMessage(data.toString()).forEach(item=>{
-				let rs = jrs.deserialize(item);
-				if (rs.type === 'success' || rs.type === 'error'){
-					if (requestProducerRecord[rs.payload.id]){
-						requestProducerRecord[rs.payload.id].write('---fibMS---' + item);
-						delete requestProducerRecord[rs.payload.id];
-					}
+		while (data = conn.read(25)){
+			let len = tools.parseMessage(data.toString()),
+				item = conn.read(len).toString(),
+				rs = jrs.deserialize(item);
+
+			if (rs.type === 'success' || rs.type === 'error'){
+				if (requestProducerRecord[rs.payload.id]){
+					let content = new Buffer(item),
+						info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+					requestProducerRecord[rs.payload.id].write(Buffer.concat([info, content], info.length + content.length));
+					delete requestProducerRecord[rs.payload.id];
 				}
-			});
+			}
 		}
 		conn.close();
 		delete consumerConn[clientid];

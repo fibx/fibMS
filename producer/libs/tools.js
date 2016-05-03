@@ -7,8 +7,6 @@ module.exports = {
 		return str.substr(0, str.length - 1);
 	},
 	parseMessage(str){
-		return str.split('---fibMS---').filter(function(item){
-			return !!item;
-		});
+		return parseInt(str.substr(15, 8));
 	}
 }

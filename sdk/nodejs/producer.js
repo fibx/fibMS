@@ -4,8 +4,6 @@ const jrs = require('./libs/serializer');
 const uuid = require('./libs/uuid');
 const tools = require('./libs/tools');
 
-const separator = '---fibMS---';
-
 let Message = function(texts){
 	this.texts = Array.isArray(texts) ? texts : typeof texts === 'string' ? [texts] : [];
 	this.type = Producer.prototype.MESSAGE_NORMAL;
@@ -62,18 +60,26 @@ let Producer = function(option){
 		});	
 
 		let callbackPool = that.callbackPool;
-		that.client.on('data', function(data){
+		that.client.on('readable', function(){
 			that.connected = true;
-			tools.parseMessage(data.toString()).forEach(item=>{
-				let rs = jrs.deserialize(item);
-				if (rs.type === 'success'){
-					let cb = callbackPool[rs.payload.id];
-					cb && cb.success && cb.success(rs.payload.result || null);
-				} else if (rs.type === 'error'){
-					let cb = callbackPool[rs.payload.id];
-					cb && cb.error && cb.error(rs.payload.error || null);
-				}
-			});
+			let info = that.client.read(25).toString();
+			if (!info){
+				return;
+			}
+			let contentLength = tools.parseMessage(info.toString()),
+				item = that.client.read(contentLength).toString();
+			let rs = jrs.deserialize(item);
+			if (rs.type === 'success') {
+				let cb = callbackPool[rs.payload.id];
+				cb && cb.success && cb.success(rs.payload.result || null);
+			} else if (rs.type === 'error') {
+				let cb = callbackPool[rs.payload.id];
+				cb && cb.error && cb.error(rs.payload.error || null);
+			}
+		});
+
+		that.client.on('error', function(err){
+			console.log(err);
 		});
 
 		that.client.on('close', function(){
@@ -84,6 +90,10 @@ let Producer = function(option){
 	this.connect();
 }
 
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
+
 function send(str){
 	let that = this;
 	if (this.connected === 'connecting'){
@@ -91,11 +101,13 @@ function send(str){
 			send.call(that, str);
 		}, 0);
 	}
+	let content = new Buffer(str),
+		info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
 	if (this.connected === true){
-		this.client.write(separator + str);
+		this.client.write(Buffer.concat([info, content], info.length + content.length));
 	} else {
 		this.connect(function(){
-			that.client.write(separator + str);
+			this.client.write(Buffer.concat([info, content], info.length + content.length));
 		});
 	}
 }

@@ -21,21 +21,24 @@ let queneserver = {
 const RECONNECT_TIME = 1000;
 const MAX_RECONNECT_TIME = 10000;
 const requestClientRecord = {};
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 function sdkHandler(conn){
 	let data;
-	while (data = conn.read()) {
-		let d = tools.parseMessage(data.toString());
-		d.forEach(i=>{
-			let messagebody = jrs.deserialize(i);
-			if (messagebody.type === 'notification' && messagebody.payload.method === 'sendMessage'){
-				let task = message.parse(messagebody);
-				if (messagebody.payload.params.type === 'RE'){
-					requestClientRecord[messagebody.payload.params.id] = conn;
-				}
-				task && quene.addTask(task);
+	while (data = conn.read(25)) {
+		let len = tools.parseMessage(data.toString()),
+			i = conn.read(len).toString(),
+			messagebody = jrs.deserialize(i);
+
+		if (messagebody.type === 'notification' && messagebody.payload.method === 'sendMessage'){
+			let task = message.parse(messagebody);
+			if (messagebody.payload.params.type === 'RE'){
+				requestClientRecord[messagebody.payload.params.id] = conn;
 			}
-		});
+			task && quene.addTask(task);
+		}
 	}
 	conn.close();
 }
@@ -47,17 +50,19 @@ function linkQueneServer(){
 			queneserver.conn = net.connect(queneserver.ip, queneserver.port);
 			quene.setQueneServer(queneserver);
 			queneReconnectTime = 0;
-			while (data = queneserver.conn.read()){
-				let d = tools.parseMessage(data.toString());
-				d.forEach(i=>{
-					let rs = jrs.deserialize(i);
-					if (rs.type === 'success' || rs.type === 'error'){
-						if (requestClientRecord[rs.payload.id]){
-							requestClientRecord[rs.payload.id].write('---fibMS---' + i);
-							delete requestClientRecord[rs.payload.id];
-						}
+			while (data = queneserver.conn.read(25)){
+				let len = tools.parseMessage(data.toString()),
+					i = queneserver.conn.read(len).toString();
+
+				let rs = jrs.deserialize(i);
+				if (rs.type === 'success' || rs.type === 'error'){
+					if (requestClientRecord[rs.payload.id]){
+						let content = new Buffer(i),
+							info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+						requestClientRecord[rs.payload.id].write(Buffer.concat([info, content], info.length + content.length));
+						delete requestClientRecord[rs.payload.id];
 					}
-				});
+				}
 			}
 			queneserver.conn.close();
 			queneserver.conn = null;
@@ -97,35 +102,43 @@ function linkCenter(){
 		log.info('link', 'link center error');
 		return;
 	}
-	conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_connect', {
+
+	let content = new Buffer(jrs.request(uuid.v4(), 'fibmscenter_connect', {
 		clientid: `producer-${config.producerID}`, 
 		token: global.getToken()
-	}));
-	while (data = conn.read()){
-		let d = tools.parseMessage(data.toString());
-		d.forEach(i=>{
-			let item = jrs.deserialize(i).payload;
-			switch (item.method){
-				case 'fibmscenter_healthCheck':
-					conn.write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_healthCheck', {
+	})),
+		info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+	conn.write(Buffer.concat([info, content], info.length + content.length));
+
+	while (data = conn.read(25)) {
+		let len = tools.parseMessage(data.toString()),
+			i = conn.read(len).toString();
+		let item = jrs.deserialize(i).payload;
+		switch (item.method) {
+			case 'fibmscenter_healthCheck':
+
+				let contentH = new Buffer(jrs.request(uuid.v4(), 'fibmscenter_healthCheck', {
 						startTime: item.params.startTime,
 						clientid: `producer-${config.producerID}`,
 						token: global.getToken()
-					}));
-					break;
-				case 'fibmscenter_setQueneServer':
-					let {ip, port} = item.params;
-					if (ip != queneserver.ip || port != queneserver.port){
-						queneserver.conn && queneserver.conn.close();
-						queneserver = {
-							conn: null,
-							ip,
-							port
-						};
-					}
-					break;
-			}
-		});
+					})),
+					infoH = new Buffer(`--fibMS-Length:${addZero(contentH.length + '', 8)}--`);
+				conn.write(Buffer.concat([infoH, contentH], infoH.length + contentH.length));
+				break;
+			case 'fibmscenter_setQueneServer':
+				let {
+					ip, port
+				} = item.params;
+				if (ip != queneserver.ip || port != queneserver.port) {
+					queneserver.conn && queneserver.conn.close();
+					queneserver = {
+						conn: null,
+						ip,
+						port
+					};
+				}
+				break;
+		}
 	}
 	conn.close();
 

@@ -2,6 +2,9 @@ const coroutine = require("coroutine");
 const jrs = require('./jsonrpc/serializer');
 const uuid = require('./jsonrpc/uuid');
 const global = require('./global')();
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 function Q(){
 	let listens = null,
@@ -45,7 +48,9 @@ function Q(){
 							let conns = global.getClient().consumerConn;
 							clientids.forEach(clientid=>{
 								if (conns[clientid]){
-									conns[clientid].write('---fibMS---' + jrs.request(id, message, params));
+									let content = new Buffer(jrs.request(id, message, params)),
+										info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+									conns[clientid].write(Buffer.concat([info, content], info.length + content.length));
 								}
 							});
 						}
@@ -72,10 +77,15 @@ function Q(){
 		},
 		addQuene(str, conn){
 			let obj = jrs.deserialize(str);
+			try{
 			if (obj.payload.method.substr(0, 2) === 'RE'){
 				global.addRequestProducerRecord(obj.payload.id, conn);
 			}
 			quenes.push(obj);
+			} catch(e){
+				console.log(str, obj);
+				console.log('--------------');
+			}
 		}
 	}
 }

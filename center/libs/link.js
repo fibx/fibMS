@@ -7,43 +7,45 @@ const global = require('./global')();
 const strategy = require('./strategy');
 const jrs = require('./jsonrpc/serializer');
 const config = require('../config.json');
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 function handler(conn){
 	let data, connType, connID;
 
-	while (data = conn.read()){
-		let d = tools.parseMessage(data.toString()), rs, type;
-		d.forEach(i=>{
-			let item = jrs.deserialize(i).payload;
-			switch (item.method){
-				case 'fibmscenter_connect':
-					type = item.params.clientid.split('-')[0];
-					rs = global.authToken(type, item.params.clientid, item.params.token);
-					if (rs){
-						
-						connType = type;
-						connID = item.params.clientid;
+	while (data = conn.read(25)){
+		let len = tools.parseMessage(data.toString()), rs, type;
+		let i = conn.read(len).toString();
+		let item = jrs.deserialize(i).payload;
+		switch (item.method) {
+			case 'fibmscenter_connect':
+				type = item.params.clientid.split('-')[0];
+				rs = global.authToken(type, item.params.clientid, item.params.token);
+				if (rs) {
 
-						global.setConn(type, item.params.clientid, conn);
-						global.setAddress(type, item.params.clientid, item.params.ip, item.params.port);
-					} else {
-						log.info('app', `client:${item.params.clientid} auth error`);
-					}
-					if (type === 'producer' || type === 'queneserver'){
-						strategy.allotQueneServer();
-					} 
-					break;
-				case 'fibmscenter_healthCheck':
-					type = item.params.clientid.split('-')[0];
-					rs = global.authToken(type, item.params.clientid, item.params.token);
-					if (rs){
-						global.setPing(type, item.params.clientid, Date.now() - item.params.startTime);
-					} else {
-						log.info('app', `client:${item.params.clientid} auth error`);
-					}
-					break;
-			}
-		});
+					connType = type;
+					connID = item.params.clientid;
+
+					global.setConn(type, item.params.clientid, conn);
+					global.setAddress(type, item.params.clientid, item.params.ip, item.params.port);
+				} else {
+					log.info('app', `client:${item.params.clientid} auth error`);
+				}
+				if (type === 'producer' || type === 'queneserver') {
+					strategy.allotQueneServer();
+				}
+				break;
+			case 'fibmscenter_healthCheck':
+				type = item.params.clientid.split('-')[0];
+				rs = global.authToken(type, item.params.clientid, item.params.token);
+				if (rs) {
+					global.setPing(type, item.params.clientid, Date.now() - item.params.startTime);
+				} else {
+					log.info('app', `client:${item.params.clientid} auth error`);
+				}
+				break;
+		}
 	}
 
 	conn.close();
@@ -58,7 +60,9 @@ function healthCheck(){
 
 		clientids.forEach(clientid=>{
 			try{
-				conns[t][clientid].write('---fibMS---' + jrs.notification('fibmscenter_healthCheck', {startTime: Date.now()}));
+				let content = new Buffer(jrs.notification('fibmscenter_healthCheck', {startTime: Date.now()}));
+				let info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+				conns[t][clientid].write(Buffer.concat([info, content], info.length + content.length));
 			} catch (e){
 				afterDisconnect(t, clientid);
 			}

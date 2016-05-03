@@ -3,6 +3,9 @@ const net = require('net');
 const jrs = require('./libs/serializer');
 const uuid = require('./libs/uuid');
 const tools = require('./libs/tools');
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 let Consumer = function(option){
 	option = option || {
@@ -34,35 +37,43 @@ let Consumer = function(option){
 		});	
 
 		let callbackPool = that.callbackPool;
-		that.client.on('data', function(data){
+		that.client.on('readable', function(){
 			that.connected = true;
-			tools.parseMessage(data.toString()).forEach(function(item){
-				let rs = jrs.deserialize(item.toString()),
-					len = rs.payload.method.length;
-				let messageName = rs.payload.method.substr(0, len - 3);	     // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
-				let type = rs.payload.method.substr(len - 2, 2);	         // payload.method = ${msgName}_${type}
-				switch (type) {
-					case 'RE':
-						if (callbackPool.requestService[messageName]){		 // cb(params, successFunc, errorFunc)
-							callbackPool.requestService[messageName](rs.payload.params, function(result){	 
-								send.call(that, jrs.success(rs.payload.id, result));
-							}, function(result){
-								let data = Array.prototype.slice.call(arguments);
-								data.splice(0, 1);
-								send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
-							});
-						}
-						break;
-					case 'SI':
-						callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
-						break;
-					case 'GR':
-						callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func){
-							func(rs.payload.params);
+			let info = that.client.read(25);
+			if (!info) {
+				return;
+			}
+			let contentLength = tools.parseMessage(info.toString()),
+				item = that.client.read(contentLength).toString();
+			let rs = jrs.deserialize(item.toString()),
+				len = rs.payload.method.length;
+			let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
+			let type = rs.payload.method.substr(len - 2, 2); 		// payload.method = ${msgName}_${type}
+			switch (type) {
+				case 'RE':
+					if (callbackPool.requestService[messageName]) { // cb(params, successFunc, errorFunc)
+						callbackPool.requestService[messageName](rs.payload.params, function(result) {
+							send.call(that, jrs.success(rs.payload.id, result));
+						}, function(result) {
+							let data = Array.prototype.slice.call(arguments);
+							data.splice(0, 1);
+							send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
 						});
-						break;
-				}
-			});
+					}
+					break;
+				case 'SI':
+					callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
+					break;
+				case 'GR':
+					callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func) {
+						func(rs.payload.params);
+					});
+					break;
+			}
+		});
+
+		that.client.on('error', function(err){
+			console.log(err);
 		});
 
 		that.client.on('close', function(){
@@ -81,10 +92,12 @@ function send(str){
 		}, 0);
 	}
 	if (this.connected === true){
-		this.client.write('---fibMS---' + str);
+		let content = new Buffer(str),
+			info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+		this.client.write(Buffer.concat([info, content], info.length + content.length));
 	} else {
 		this.connect(function(){
-			that.client.write('---fibMS---' + str);
+			that.client.write(Buffer.concat([info, content], info.length + content.length));
 		});
 	}
 }

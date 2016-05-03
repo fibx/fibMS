@@ -1,6 +1,9 @@
 const global = require('./global')();
 const jrs = require('./jsonrpc/serializer');
 const uuid = require('./jsonrpc/uuid');
+function addZero(str, length){               
+    return new Array(length - str.length + 1).join("0") + str;              
+}
 
 exports.allotQueneServer = function(queneserverID){
 	let conns = global.getConns(),
@@ -22,10 +25,12 @@ exports.allotQueneServer = function(queneserverID){
 				return;
 			}
 			
-			conns.producer[producer].write('---fibMS---' + jrs.request(uuid.v4(), 'fibmscenter_setQueneServer', {
+			let content = new Buffer(jrs.request(uuid.v4(), 'fibmscenter_setQueneServer', {
 				ip: s.ip,
 				port: s.port
 			}));
+			let info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
+			conns.producer[producer].write(Buffer.concat([info, content], info.length + content.length));
 			clients.producer[producer].queneserverID = servers[i];
 		});
 	}
