@@ -39,36 +39,35 @@ let Consumer = function(option){
 		let callbackPool = that.callbackPool;
 		that.client.on('readable', function(){
 			that.connected = true;
-			let info = that.client.read(25);
-			if (!info) {
-				return;
-			}
-			let contentLength = tools.parseMessage(info.toString()),
-				item = that.client.read(contentLength).toString();
-			let rs = jrs.deserialize(item.toString()),
-				len = rs.payload.method.length;
-			let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
-			let type = rs.payload.method.substr(len - 2, 2); 		// payload.method = ${msgName}_${type}
-			switch (type) {
-				case 'RE':
-					if (callbackPool.requestService[messageName]) { // cb(params, successFunc, errorFunc)
-						callbackPool.requestService[messageName](rs.payload.params, function(result) {
-							send.call(that, jrs.success(rs.payload.id, result));
-						}, function(result) {
-							let data = Array.prototype.slice.call(arguments);
-							data.splice(0, 1);
-							send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
+			let info;
+			while (info = that.client.read(25)){
+				let contentLength = tools.parseMessage(info.toString()),
+					item = that.client.read(contentLength).toString();
+				let rs = jrs.deserialize(item.toString()),
+					len = rs.payload.method.length;
+				let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
+				let type = rs.payload.method.substr(len - 2, 2); // payload.method = ${msgName}_${type}
+				switch (type) {
+					case 'RE':
+						if (callbackPool.requestService[messageName]) { // cb(params, successFunc, errorFunc)
+							callbackPool.requestService[messageName](rs.payload.params, function(result) {
+								send.call(that, jrs.success(rs.payload.id, result));
+							}, function(result) {
+								let data = Array.prototype.slice.call(arguments);
+								data.splice(0, 1);
+								send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
+							});
+						}
+						break;
+					case 'SI':
+						callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
+						break;
+					case 'GR':
+						callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func) {
+							func(rs.payload.params);
 						});
-					}
-					break;
-				case 'SI':
-					callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
-					break;
-				case 'GR':
-					callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func) {
-						func(rs.payload.params);
-					});
-					break;
+						break;
+				}
 			}
 		});
 

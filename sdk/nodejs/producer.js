@@ -62,19 +62,18 @@ let Producer = function(option){
 		let callbackPool = that.callbackPool;
 		that.client.on('readable', function(){
 			that.connected = true;
-			let info = that.client.read(25);
-			if (!info){
-				return;
-			}
-			let contentLength = tools.parseMessage(info.toString()),
-				item = that.client.read(contentLength).toString();
-			let rs = jrs.deserialize(item);
-			if (rs.type === 'success') {
-				let cb = callbackPool[rs.payload.id];
-				cb && cb.success && cb.success(rs.payload.result || null);
-			} else if (rs.type === 'error') {
-				let cb = callbackPool[rs.payload.id];
-				cb && cb.error && cb.error(rs.payload.error || null);
+			let info;
+			while(info = that.client.read(25)){
+				let contentLength = tools.parseMessage(info.toString()),
+					item = that.client.read(contentLength).toString();
+				let rs = jrs.deserialize(item);
+				if (rs.type === 'success') {
+					let cb = callbackPool[rs.payload.id];
+					cb && cb.success && cb.success(rs.payload.result || null);
+				} else if (rs.type === 'error') {
+					let cb = callbackPool[rs.payload.id];
+					cb && cb.error && cb.error(rs.payload.error || null);
+				}
 			}
 		});
 
