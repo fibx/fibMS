@@ -16,7 +16,7 @@ message.setType(Producer.MESSAGE_GROUP);
 message.setProperty(Producer.SCHEDULED_DEALY, 10002);
 message.setProperty(Producer.SCHEDULED_PERIOD, 2 * 1000);
 message.setProperty(Producer.SCHEDULED_REPEAT, 6);
-message.setParams('hello all', 'ok');
+message.setParams('hello all 董一炜', 'ok');
 Producer.sendMessage(message);
 
 //循环消息
