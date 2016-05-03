@@ -10,7 +10,7 @@ function G(){
 	let token = '',
 		consumerClient = {},
 		consumerConn = {},
-		queneRate = 10,
+		queneRate = 2,
 		requestProducerRecord = {};
 	
 	function consumerConnListen(conn, clientid){
