@@ -62,7 +62,7 @@ let Producer = function(option){
 		let callbackPool = that.callbackPool;
 		that.client.on('readable', function(){
 			that.connected = true;
-			let info = that.client.read(25).toString();
+			let info = that.client.read(25);
 			if (!info){
 				return;
 			}
