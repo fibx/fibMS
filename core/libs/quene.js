@@ -1,4 +1,5 @@
 const coroutine = require("coroutine");
+const collection = require("collection");
 const jrs = require('./jsonrpc/serializer');
 const uuid = require('./jsonrpc/uuid');
 const global = require('./global')();
@@ -8,9 +9,12 @@ function addZero(str, length){
 
 function Q(){
 	let listens = null,
-		quenes = [];
+		quenes = new collection.Queue(100*10000);
 
 	function route(data){
+		if (!data){
+			return;
+		}
 		let rs = data.payload,
 			method = rs.method,
 			params = rs.params,
@@ -41,8 +45,8 @@ function Q(){
 		start(){
 			function quene(){
 				while (true){
-					if (listens && quenes.length){
-						let rs = route(quenes.shift());
+					if (listens){
+						let rs = route(quenes.poll());
 						if (rs){
 							let {clientids, message, params, id} = rs;
 							let conns = global.getClient().consumerConn;
@@ -77,15 +81,10 @@ function Q(){
 		},
 		addQuene(str, conn){
 			let obj = jrs.deserialize(str);
-			try{
 			if (obj.payload.method.substr(0, 2) === 'RE'){
 				global.addRequestProducerRecord(obj.payload.id, conn);
 			}
-			quenes.push(obj);
-			} catch(e){
-				console.log(str, obj);
-				console.log('--------------');
-			}
+			quenes.add(obj);
 		}
 	}
 }

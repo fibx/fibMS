@@ -31,7 +31,6 @@ function sdkHandler(conn){
 		let len = tools.parseMessage(data.toString()),
 			i = conn.read(len).toString(),
 			messagebody = jrs.deserialize(i);
-
 		if (messagebody.type === 'notification' && messagebody.payload.method === 'sendMessage'){
 			let task = message.parse(messagebody);
 			if (messagebody.payload.params.type === 'RE'){

@@ -139,9 +139,8 @@ function linkCenter(){
 function listenHandler(conn){
 	let data;
 	while (data = conn.read(25)){
-		let len = tools.parseMessage(data.toString()),
-			i = conn.read(len).toString();
-		let item = jrs.deserialize(i).payload,
+		let len = tools.parseMessage(data.toString());
+		let item = jrs.deserialize(conn.read(len).toString()).payload,
 			type = item.method.substr(item.method.length - 2, 2),
 			id = item.id,
 			listens = global.getListens(),
