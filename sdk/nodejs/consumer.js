@@ -13,16 +13,7 @@ function writeToClient(bufs, client){
 		len += b.length;
 	});
 	let buf = Buffer.concat(bufs, len);
-	while (len > 0) {
-		if (len > 1500) {
-			client.write(buf.slice(start, start + 1500));
-			len -= 1500;
-			start += 1500;
-		} else {
-			client.write(buf.slice(start, start + len));
-			len = 0;
-		}
-	}
+	client.write(buf);
 }
 
 let Consumer = function(option){
@@ -62,6 +53,7 @@ let Consumer = function(option){
 
 		let callbackPool = that.callbackPool;
 		that.client.on('data', function(data){
+			that.connected = true;
 			let lenLeft = that.dataPack.limit - that.dataPack.data.length;
 			if (data.length < lenLeft) {
 				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);

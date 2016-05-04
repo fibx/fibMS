@@ -40,6 +40,11 @@ let Producer = function(option){
 	}
 	let that = this;
 	this.id = uuid.v4();
+	this.dataPack = {
+		data: Buffer(0),
+		limit: 25,
+		waitHead: true
+	};
 	this.callbackPool = {};
 	this.connected = 'none';
 
@@ -60,22 +65,24 @@ let Producer = function(option){
 		});	
 
 		let callbackPool = that.callbackPool;
-		that.client.on('readable', function(){
+		that.client.on('data', function(data){
 			that.connected = true;
-			let info;
-			while(info = that.client.read(25)){
-				let contentLength = tools.parseMessage(info.toString()),
-					item = '';
-				while (contentLength > 0) {
-					if (contentLength > 1500) {
-						item += that.client.read(1500).toString();
-						contentLength -= 1500;
-					} else {
-						item += that.client.read(contentLength).toString();
-						contentLength = 0;
-					}
+			let lenLeft = that.dataPack.limit - that.dataPack.data.length;
+			if (data.length < lenLeft) {
+				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
+				return;
+			} else {
+				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
+			}
+			if (that.dataPack.waitHead){
+				let contentLength = tools.parseMessage(that.dataPack.data.toString());
+				that.dataPack = {
+					data: data.slice(lenLeft),
+					limit: contentLength,
+					waitHead: false
 				}
-				let rs = jrs.deserialize(item);
+			} else {
+				let rs = jrs.deserialize(that.dataPack.data.toString());
 				if (rs.type === 'success') {
 					let cb = callbackPool[rs.payload.id];
 					cb && cb.success && cb.success(rs.payload.result || null);
@@ -108,16 +115,7 @@ function writeToClient(bufs, client){
 		len += b.length;
 	});
 	let buf = Buffer.concat(bufs, len);
-	while (len > 0) {
-		if (len > 1500) {
-			client.write(buf.slice(start, start + 1500));
-			len -= 1500;
-			start += 1500;
-		} else {
-			client.write(buf.slice(start, start + len));
-			len = 0;
-		}
-	}
+	client.write(buf);
 }
 
 function send(str){
