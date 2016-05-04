@@ -65,7 +65,16 @@ let Producer = function(option){
 			let info;
 			while(info = that.client.read(25)){
 				let contentLength = tools.parseMessage(info.toString()),
-					item = that.client.read(contentLength).toString();
+					item = '';
+				while (contentLength > 0) {
+					if (contentLength > 1500) {
+						item += that.client.read(1500).toString();
+						contentLength -= 1500;
+					} else {
+						item += that.client.read(contentLength).toString();
+						contentLength = 0;
+					}
+				}
 				let rs = jrs.deserialize(item);
 				if (rs.type === 'success') {
 					let cb = callbackPool[rs.payload.id];
@@ -93,6 +102,24 @@ function addZero(str, length){
     return new Array(length - str.length + 1).join("0") + str;              
 }
 
+function writeToClient(bufs, client){
+	let len = 0, start = 0;
+	bufs.forEach(function (b){
+		len += b.length;
+	});
+	let buf = Buffer.concat(bufs, len);
+	while (len > 0) {
+		if (len > 1500) {
+			client.write(buf.slice(start, start + 1500));
+			len -= 1500;
+			start += 1500;
+		} else {
+			client.write(buf.slice(start, start + len));
+			len = 0;
+		}
+	}
+}
+
 function send(str){
 	let that = this;
 	if (this.connected === 'connecting'){
@@ -103,10 +130,10 @@ function send(str){
 	let content = new Buffer(str),
 		info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
 	if (this.connected === true){
-		this.client.write(Buffer.concat([info, content], info.length + content.length));
+		writeToClient([info, content], this.client);
 	} else {
 		this.connect(function(){
-			this.client.write(Buffer.concat([info, content], info.length + content.length));
+			writeToClient([info, content], that.client);
 		});
 	}
 }

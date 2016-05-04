@@ -7,6 +7,24 @@ function addZero(str, length){
     return new Array(length - str.length + 1).join("0") + str;              
 }
 
+function writeToClient(bufs, client){
+	let len = 0, start = 0;
+	bufs.forEach(function (b){
+		len += b.length;
+	});
+	let buf = Buffer.concat(bufs, len);
+	while (len > 0) {
+		if (len > 1500) {
+			client.write(buf.slice(start, start + 1500));
+			len -= 1500;
+			start += 1500;
+		} else {
+			client.write(buf.slice(start, start + len));
+			len = 0;
+		}
+	}
+}
+
 let Consumer = function(option){
 	option = option || {
 		port: 6083
@@ -16,6 +34,11 @@ let Consumer = function(option){
 		message: {},
 		groupMessage: {},
 		requestService: {}
+	};
+	this.dataPack = {
+		data: Buffer(0),
+		limit: 25,
+		waitHead: true
 	};
 	this.id = uuid.v4();
 	this.connected = 'none';
@@ -35,15 +58,26 @@ let Consumer = function(option){
 			that.connected = true;
 			cb && cb();
 		});	
+		that.client.setKeepAlive(true);
 
 		let callbackPool = that.callbackPool;
-		that.client.on('readable', function(){
-			that.connected = true;
-			let info;
-			while (info = that.client.read(25)){
-				let contentLength = tools.parseMessage(info.toString()),
-					item = that.client.read(contentLength).toString();
-				let rs = jrs.deserialize(item.toString()),
+		that.client.on('data', function(data){
+			let lenLeft = that.dataPack.limit - that.dataPack.data.length;
+			if (data.length < lenLeft) {
+				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
+				return;
+			} else {
+				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
+			}
+			if (that.dataPack.waitHead){
+				let contentLength = tools.parseMessage(that.dataPack.data.toString());
+				that.dataPack = {
+					data: data.slice(lenLeft),
+					limit: contentLength,
+					waitHead: false
+				}
+			} else {				
+				let rs = jrs.deserialize(that.dataPack.data.toString()),
 					len = rs.payload.method.length;
 				let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
 				let type = rs.payload.method.substr(len - 2, 2); // payload.method = ${msgName}_${type}
@@ -67,6 +101,11 @@ let Consumer = function(option){
 							func(rs.payload.params);
 						});
 						break;
+				}
+				that.dataPack = {
+					data: data.slice(lenLeft),
+					limit: 25,
+					waitHead: true
 				}
 			}
 		});
@@ -93,10 +132,10 @@ function send(str){
 	if (this.connected === true){
 		let content = new Buffer(str),
 			info = new Buffer(`--fibMS-Length:${addZero(content.length + '', 8)}--`);
-		this.client.write(Buffer.concat([info, content], info.length + content.length));
+		writeToClient([info, content], that.client);
 	} else {
 		this.connect(function(){
-			that.client.write(Buffer.concat([info, content], info.length + content.length));
+			writeToClient([info, content], that.client);
 		});
 	}
 }
