@@ -98,7 +98,7 @@ let Consumer = function(option){
 					data: data.slice(lenLeft),
 					limit: 25,
 					waitHead: true
-				}
+				};
 			}
 		});
 

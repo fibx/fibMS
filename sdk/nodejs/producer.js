@@ -90,6 +90,11 @@ let Producer = function(option){
 					let cb = callbackPool[rs.payload.id];
 					cb && cb.error && cb.error(rs.payload.error || null);
 				}
+				that.dataPack = {
+					data: data.slice(lenLeft),
+					limit: 25,
+					waitHead: true
+				};
 			}
 		});
 
