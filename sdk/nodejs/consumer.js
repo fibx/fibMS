@@ -54,51 +54,65 @@ let Consumer = function(option){
 		let callbackPool = that.callbackPool;
 		that.client.on('data', function(data){
 			that.connected = true;
-			let lenLeft = that.dataPack.limit - that.dataPack.data.length;
-			if (data.length < lenLeft) {
-				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
-				return;
-			} else {
-				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
-			}
-			if (that.dataPack.waitHead){
-				let contentLength = tools.parseMessage(that.dataPack.data.toString());
-				that.dataPack = {
-					data: data.slice(lenLeft),
-					limit: contentLength,
-					waitHead: false
+			while (true){
+				let lenLeft = that.dataPack.limit - that.dataPack.data.length;
+				if (data.length < lenLeft) {
+					that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
+					return;
+				} else {
+					that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
 				}
-			} else {				
-				let rs = jrs.deserialize(that.dataPack.data.toString()),
-					len = rs.payload.method.length;
-				let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
-				let type = rs.payload.method.substr(len - 2, 2); // payload.method = ${msgName}_${type}
-				switch (type) {
-					case 'RE':
-						if (callbackPool.requestService[messageName]) { // cb(params, successFunc, errorFunc)
-							callbackPool.requestService[messageName](rs.payload.params, function(result) {
-								send.call(that, jrs.success(rs.payload.id, result));
-							}, function(result) {
-								let data = Array.prototype.slice.call(arguments);
-								data.splice(0, 1);
-								send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
+				if (that.dataPack.waitHead) {
+					let contentLength = tools.parseMessage(that.dataPack.data.toString());
+					that.dataPack = {
+						limit: contentLength,
+						waitHead: false
+					}
+					if (data.slice(lenLeft).length > contentLength){
+						that.dataPack.data = data.slice(lenLeft, lenLeft + contentLength);
+						data = data.slice(lenLeft + contentLength);
+					} else {
+						that.dataPack.data = data.slice(lenLeft);
+						break;
+					}
+				} else {
+					let rs = jrs.deserialize(that.dataPack.data.toString()),
+						len = rs.payload.method.length;
+					let messageName = rs.payload.method.substr(0, len - 3); // ${msgName}_SI | ${msgName}_GR | ${msgName}_RE 
+					let type = rs.payload.method.substr(len - 2, 2); // payload.method = ${msgName}_${type}
+					switch (type) {
+						case 'RE':
+							if (callbackPool.requestService[messageName]) { // cb(params, successFunc, errorFunc)
+								callbackPool.requestService[messageName](rs.payload.params, function(result) {
+									send.call(that, jrs.success(rs.payload.id, result));
+								}, function(result) {
+									let data = Array.prototype.slice.call(arguments);
+									data.splice(0, 1);
+									send.call(that, jrs.error(rs.payload.id, new jrs.err.JsonRpcError(result, data)));
+								});
+							}
+							break;
+						case 'SI':
+							callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
+							break;
+						case 'GR':
+							callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func) {
+								func(rs.payload.params);
 							});
-						}
+							break;
+					}
+					that.dataPack = {
+						limit: 25,
+						waitHead: true
+					};
+					if (data.slice(lenLeft).length > 25){
+						that.dataPack.data = data.slice(lenLeft, lenLeft + 25);
+						data = data.slice(lenLeft + 25);
+					} else {
+						that.dataPack.data = data.slice(lenLeft);
 						break;
-					case 'SI':
-						callbackPool.message[messageName] && callbackPool.message[messageName](rs.payload.params);
-						break;
-					case 'GR':
-						callbackPool.groupMessage[messageName] && callbackPool.groupMessage[messageName].forEach(function(func) {
-							func(rs.payload.params);
-						});
-						break;
+					}
 				}
-				that.dataPack = {
-					data: data.slice(lenLeft),
-					limit: 25,
-					waitHead: true
-				};
 			}
 		});
 

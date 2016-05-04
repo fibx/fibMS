@@ -67,34 +67,48 @@ let Producer = function(option){
 		let callbackPool = that.callbackPool;
 		that.client.on('data', function(data){
 			that.connected = true;
-			let lenLeft = that.dataPack.limit - that.dataPack.data.length;
-			if (data.length < lenLeft) {
-				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
-				return;
-			} else {
-				that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
-			}
-			if (that.dataPack.waitHead){
-				let contentLength = tools.parseMessage(that.dataPack.data.toString());
-				that.dataPack = {
-					data: data.slice(lenLeft),
-					limit: contentLength,
-					waitHead: false
+			while(true){
+				let lenLeft = that.dataPack.limit - that.dataPack.data.length;
+				if (data.length < lenLeft) {
+					that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + data.length);
+					return;
+				} else {
+					that.dataPack.data = Buffer.concat([that.dataPack.data, data], that.dataPack.data.length + lenLeft);
 				}
-			} else {
-				let rs = jrs.deserialize(that.dataPack.data.toString());
-				if (rs.type === 'success') {
-					let cb = callbackPool[rs.payload.id];
-					cb && cb.success && cb.success(rs.payload.result || null);
-				} else if (rs.type === 'error') {
-					let cb = callbackPool[rs.payload.id];
-					cb && cb.error && cb.error(rs.payload.error || null);
+				if (that.dataPack.waitHead) {
+					let contentLength = tools.parseMessage(that.dataPack.data.toString());
+					that.dataPack = {
+						limit: contentLength,
+						waitHead: false
+					}
+					if (data.slice(lenLeft).length > contentLength){
+						that.dataPack.data = data.slice(lenLeft, lenLeft + contentLength);
+						data = data.slice(lenLeft + contentLength);
+					} else {
+						that.dataPack.data = data.slice(lenLeft);
+						break;
+					}
+				} else {
+					let rs = jrs.deserialize(that.dataPack.data.toString());
+					if (rs.type === 'success') {
+						let cb = callbackPool[rs.payload.id];
+						cb && cb.success && cb.success(rs.payload.result || null);
+					} else if (rs.type === 'error') {
+						let cb = callbackPool[rs.payload.id];
+						cb && cb.error && cb.error(rs.payload.error || null);
+					}
+					that.dataPack = {
+						limit: 25,
+						waitHead: true
+					};
+					if (data.slice(lenLeft).length > 25){
+						that.dataPack.data = data.slice(lenLeft, lenLeft + 25);
+						data = data.slice(lenLeft + 25);
+					} else {
+						that.dataPack.data = data.slice(lenLeft);
+						break;
+					}
 				}
-				that.dataPack = {
-					data: data.slice(lenLeft),
-					limit: 25,
-					waitHead: true
-				};
 			}
 		});
 
