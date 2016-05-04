@@ -81,7 +81,7 @@ let Producer = function(option){
 						limit: contentLength,
 						waitHead: false
 					}
-					if (data.slice(lenLeft).length > contentLength){
+					if (data.slice(lenLeft).length >= contentLength){
 						that.dataPack.data = data.slice(lenLeft, lenLeft + contentLength);
 						data = data.slice(lenLeft + contentLength);
 					} else {
@@ -101,7 +101,7 @@ let Producer = function(option){
 						limit: 25,
 						waitHead: true
 					};
-					if (data.slice(lenLeft).length > 25){
+					if (data.slice(lenLeft).length >= 25){
 						that.dataPack.data = data.slice(lenLeft, lenLeft + 25);
 						data = data.slice(lenLeft + 25);
 					} else {
