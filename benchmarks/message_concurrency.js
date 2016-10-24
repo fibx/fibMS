@@ -1,3 +1,5 @@
+'use strict';
+
 const consumer = require('../sdk/nodejs').Consumer();
 const producer = require('../sdk/nodejs').Producer();
 
